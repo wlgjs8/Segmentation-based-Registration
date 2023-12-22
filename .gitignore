@@ -1,11 +1,8 @@
 *.pth
 *.pt
 *.ipynb
-*.jpg
-*.jpeg
 *.json
 *.pickle
-*.png
 *.stl
 *.obj
 *.nii
