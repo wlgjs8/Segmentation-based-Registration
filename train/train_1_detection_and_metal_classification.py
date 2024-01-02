@@ -1,11 +1,8 @@
 import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
-
 import sys
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
-
 import math
-
 import torch
 import torch.nn as nn
 from torch.optim import Adam
@@ -17,19 +14,14 @@ from config import (
 )
 # from hourglass import HourGlass3D
 from model.metal_concat_crop_no import HourGlass3D
+from dataloader.detection_dataset import get_detection_dataloader
+from transform.detection_transform import train_detection_transform, test_detection_transform
+from loss.gaussian_disentangle import GDLoss
+from loss.distance_regularization import DRLoss
+from loss.losses import FocalLoss
 
-from dataloader.score_dataset_no import get_detection_dataloader
-from transform import train_detection_transform, test_detection_transform
-from losses import GDLoss, LeeFocalLoss, DRLoss
-from utils import save_points2
-
-import utils
-from utils import hadamard_product, get_maximum_point_tensor
-from eval import eval_utils
-import time
 
 torch.manual_seed(123)
-# torch.manual_seed(42)
 
 writer = SummaryWriter()
 
@@ -50,7 +42,7 @@ train_dataloader, test_dataloader = get_detection_dataloader(train_detection_tra
 print('train_dataloader : ', len(train_dataloader))
 print('test_dataloader : ', len(test_dataloader))
 
-hm_criterion = LeeFocalLoss()
+hm_criterion = FocalLoss()
 gd_criterion = GDLoss()
 box_criterion = nn.MSELoss()
 pt_criterion = nn.MSELoss()

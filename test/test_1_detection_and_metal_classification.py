@@ -20,12 +20,8 @@ from config import (
     TRAINING_EPOCH, NUM_CLASSES, RESIZE_DEPTH, RESIZE_HEIGHT, RESIZE_WIDTH,
     LOWER_TOOTH_NUM, UPPER_TOOTH_NUM
 )
-# from hourglass import HourGlass3D
-from model.metal_concat_crop_no import HourGlass3D
-# from model.metal_concat_crop_all import HourGlass3D
-
-# from dataloader.score_dataset import get_detection_dataloader
-from dataloader.detection_dataset_origin import get_inference_dataloader
+from model.detection_and_metal_classification_model import HourGlass3D
+from dataloader.detection_and_metal_classification_dataset import get_inference_dataloader
 
 from utils import save_result, save_points2, generate_gaussian_heatmap_tensor
 

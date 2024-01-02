@@ -1,25 +1,15 @@
 import os
-import nibabel as nib
 import numpy as np
 import json
-
+import nibabel as nib
 from scipy import ndimage
-
 from skimage import filters
-from skimage.measure import label, regionprops
+from skimage.measure import label
+
 
 from config import (
-    RESIZE_DEPTH, RESIZE_HEIGHT, RESIZE_WIDTH
+    RESIZE_DEPTH, RESIZE_HEIGHT, RESIZE_WIDTH, UPPER_TOOTH_NUM, LOWER_TOOTH_NUM
 )
-UPPER_TOOTH_NUM = [
-    '21', '22', '23', '24', '25', '26', '27', '28',
-    '11', '12', '13', '14', '15', '16', '17', '18', 
-]
-
-LOWER_TOOTH_NUM = [
-    '31', '32', '33', '34', '35', '36', '37', '38',
-    '41', '42', '43', '44', '45', '46', '47', '48',
-]
 
 
 def draw_whole_box(box_volume, ind, label='metal'):
@@ -31,21 +21,6 @@ def draw_whole_box(box_volume, ind, label='metal'):
     else:
         color = 1
 
-    # box_volume[ind[0]:ind[3], ind[1], ind[2]] = color
-    # box_volume[ind[0]:ind[3], ind[1], ind[5]] = color
-    # box_volume[ind[0]:ind[3], ind[4], ind[2]] = color
-    # box_volume[ind[0]:ind[3], ind[4], ind[5]] = color
-    
-    # box_volume[ind[0], ind[1]:ind[4], ind[2]] = color
-    # box_volume[ind[0], ind[1]:ind[4], ind[5]] = color
-    # box_volume[ind[3], ind[1]:ind[4], ind[2]] = color
-    # box_volume[ind[3], ind[1]:ind[4], ind[5]] = color
-    
-    # box_volume[ind[0], ind[1], ind[2]:ind[5]] = color
-    # box_volume[ind[0], ind[4], ind[2]:ind[5]] = color
-    # box_volume[ind[3], ind[1], ind[2]:ind[5]] = color
-    # box_volume[ind[3], ind[4], ind[2]:ind[5]] = color
-    
     # 두 점으로 정의된 박스의 꼭지점 좌표
     point1 = (ind[0], ind[1], ind[2])
     point2 = (ind[3], ind[4], ind[5])
@@ -146,20 +121,6 @@ def half_fill_whole_box(box_volume, ind, label='metal'):
 
 
 def add_margin(minx, miny, minz, maxx, maxy, maxz, MARGIN=3.5):
-    # if minx < 0:
-    #     minx = 0
-    # if miny < 0:
-    #     miny = 0
-    # if minz < 0:
-    #     minz = 0
-
-    # if maxx >= RESIZE_DEPTH:
-    #     maxx = RESIZE_DEPTH -1
-    # if maxy >= RESIZE_HEIGHT:
-    #     maxy = RESIZE_HEIGHT -1
-    # if maxz >= RESIZE_WIDTH:
-    #     maxz = RESIZE_WIDTH -1
-
     minx -= MARGIN
     miny -= MARGIN
     minz -= MARGIN
@@ -339,18 +300,3 @@ for i in range(len(datalist)):
     save_ccl_path = os.path.join(SAVE_DIR, person_id, 'otsu_{}_result.nii.gz'.format(flag))
     nii_ccl_volume = nib.Nifti1Image(ccl_concat, affine=np.eye(4))
     nib.save(nii_ccl_volume, save_ccl_path)
-
-    # otsu_volume = otsu_thresholding(fill_volume, original_image)
-    # global_volume = global_thresholding(fill_volume, original_image)
-
-    # nii_image = nib.Nifti1Image(box_volume, affine=np.eye(4))
-    # nib.save(nii_image, os.path.join(SAVE_DIR, person_id, 'box_whole_{}_result.nii.gz'.format(flag)))
-
-    # # save_otsu_path = os.path.join(SAVE_DIR, person_id, 'otsu_{}_result.nii.gz'.format(flag))
-    # save_otsu_path = os.path.join(SAVE_DIR, person_id, 'rere_otsu_{}_result.nii.gz'.format(flag))
-    # nii_otsu_volume = nib.Nifti1Image(otsu_volume, affine=np.eye(4))
-    # nib.save(nii_otsu_volume, save_otsu_path)
-    
-    # save_global_path = os.path.join(SAVE_DIR, person_id, 'global_{}_result.nii.gz'.format(flag))
-    # nii_global_volume = nib.Nifti1Image(global_volume, affine=np.eye(4))
-    # nib.save(nii_global_volume, save_global_path)

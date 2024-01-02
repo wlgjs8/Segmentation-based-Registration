@@ -3,11 +3,14 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 import sys
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 import torch
+import numpy as np
 
 from model.detection_model import HourGlass3D
 from dataloader.detection_dataset import get_detection_dataloader
 from transform.detection_transform import train_detection_transform, test_detection_transform
 
+from utils import hadamard_product, save_detection_result
+import eval_utils
 
 model = HourGlass3D(
     nStack = 2,
@@ -19,13 +22,14 @@ model = HourGlass3D(
     bUseBn = True,
 )
 
-# MODEL_WEIGHT_PATH = './checkpoints/epoch11_valLoss0.006702427752315998.pth'
-# model.load_state_dict(torch.load(MODEL_WEIGHT_PATH))
+MODEL_WEIGHT_PATH = './checkpoints/detection_best_model.pth'
+model.load_state_dict(torch.load(MODEL_WEIGHT_PATH))
+
 model = model.cuda()
 
 _, test_dataloader = get_detection_dataloader(train_detection_transform, test_detection_transform)
 
-
+box_iou_list = []
 
 with torch.no_grad():
     for idx, data in enumerate(test_dataloader):
@@ -41,22 +45,28 @@ with torch.no_grad():
 
         _ , output, offset = model(resize_image)
 
-        # pred_heatmap = output[0, (cls==1)[0], :, :, :].unsqueeze(0)
-        
-        # temp_image = resize_image
-        # temp_inter_target = None
-        # temp_target = output
-        
-        # temp_gt_cls = cls
-        # temp_gt_heatmap = resize_heatmap
-        # temp_gt_center = resize_center
-        # temp_gt_half_heatmap = resize_half_heatmap
-        # temp_person_id = person_id[0]
-        # temp_flag = flag[0]
-        # temp_reg_points = reg_output
+        gt_image = resize_image.squeeze(0).squeeze(0).detach().cpu().numpy()
+        gt_heatmap = resize_heatmap.squeeze(0).detach().cpu().numpy()
+        gt_center = resize_center.squeeze(0).detach().cpu().numpy()
+        gt_bbox = resize_bbox.squeeze(0).detach().cpu().numpy()
+        gt_cls = cls.squeeze(0).detach().cpu().numpy()
 
-        # save_points(
-        #     temp_image, temp_inter_target, temp_target, 
-        #     temp_gt_cls, temp_gt_heatmap, temp_gt_center,
-        #     temp_reg_points, temp_person_id, temp_flag
-        # )
+        pred_heatmap = output.squeeze(0).detach().cpu().numpy()
+        pred_center = hadamard_product(output.squeeze(0)).detach().cpu().numpy()
+        pred_offset = offset.squeeze(0).detach().cpu().numpy()
+
+        pred_coord1 = pred_center - pred_offset/2
+        pred_coord2 = pred_center + pred_offset/2
+        pred_bbox = np.concatenate((pred_coord1, pred_coord2), axis=1)
+    
+        if idx == 0:
+            save_detection_result(gt_image, 
+                          gt_heatmap, gt_center, gt_bbox, gt_cls,
+                          pred_heatmap, pred_center, pred_bbox)
+
+        box_iou = eval_utils.box_iou(pred_bbox[gt_cls==1], gt_bbox)
+        box_iou_list.append(box_iou)
+        # print('box_iou : ', box_iou)
+        # print()
+
+print('Avg box iou : ', sum(box_iou_list)/len(box_iou_list))

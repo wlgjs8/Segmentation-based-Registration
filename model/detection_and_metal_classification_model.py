@@ -290,6 +290,7 @@ class HourGlass3D(nn.Module):
             if _ == self.nStack - 2:
                 out = self.inter_hm_head(o2)
                 out = out.sigmoid_()
+                out = _nms(out)
                 o.append(out)
 
 
@@ -298,6 +299,7 @@ class HourGlass3D(nn.Module):
                 out64 = self.upsample(o2)
                 out = self.hm_head(out64)
                 out = out.sigmoid_()
+                out = _nms(out)
                 o.append(out)
 
                 offset = self.box_head(out64)
@@ -320,6 +322,13 @@ class HourGlass3D(nn.Module):
             # x = o1 + x
 
         return o
+    
+def _nms(heat, kernel=1):
+    pad = (kernel - 1) // 2
+    hmax = nn.functional.max_pool3d(heat, (kernel, kernel, kernel), stride=1, padding=pad)
+    keep = (hmax == heat).float()
+
+    return heat * keep
 
 class HeatmapHead(nn.Module):
     def __init__(self):
