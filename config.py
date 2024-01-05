@@ -78,5 +78,11 @@ OUTLIER = {'1' : ['34'],
 ### Focal Loss 의 Positive 정의를 위한 Epsilon ###
 FOCAL_EPSILON = 1e-3
 
+### DR Loss 주기 시작하는 Epoch ###
+DR_EPOCH = 40
+
+### Metal BCE Loss 주기 시작하는 Epoch ###
+METAL_EPOCH = 40
+
 ### Metal Classification Label Smoothing을 위한 Epsilon ###
 METAL_EPSILON = 0.05

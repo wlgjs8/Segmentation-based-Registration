@@ -102,7 +102,6 @@ class HourGlassBlock3D(nn.Module):
                 name = 'up_sample_{}_{}'.format(self.stack_index, self.block_count),
                 # module = nn.Upsample(scale_factor=2, mode='bilinear')
                 module = nn.Upsample(scale_factor=2, mode='nearest')
-                # module = nn.Upsample(scale_factor=2, mode='trilinear')
             )
             for _ in range(residual_each_block):
                 self.up_sampling.add_module(
@@ -155,10 +154,7 @@ class NewUpTransition(nn.Module):
         super(NewUpTransition, self).__init__()
 
         self.upsample = nn.ConvTranspose3d(inChans, inChans, 4, 2, 1)
-        # self.upsample = nn.ConvTranspose3d(inChans, inChans, 3, 2, 1)
-        # self.upsample = nn.ConvTranspose3d(inChans, inChans, 2, 2, 0)
         self.bn = ContBatchNorm3d(inChans)
-        # self.bn = nn.BatchNorm3d(inChans)
         self.relu = nn.ReLU()
 
         for m in self.modules():
@@ -184,11 +180,6 @@ class HourGlass3D(nn.Module):
         self.nJointCount        = nJointCount
         self.bUseBn             = bUseBn
 
-        # self.pre_process = nn.Sequential(
-        #     nn.Conv3d(1, nChannels, kernel_size = 3, padding = 1),
-        #     Residual3D(use_bn = bUseBn, input_channels = nChannels, out_channels = nChannels, mid_channels = nMidChannels),
-        #     nn.MaxPool3d(kernel_size = 2, stride = 2),
-        # )
         self.pre_process = nn.Sequential(
             nn.Conv3d(1, nChannels, kernel_size = 3, stride=2, padding = 1),
             Residual3D(use_bn = bUseBn, input_channels = nChannels, out_channels = nChannels, mid_channels = nMidChannels),
@@ -246,10 +237,9 @@ class HourGlass3D(nn.Module):
             weight_init_xavier_uniform(m)
 
     def forward(self, inputs):
-        o = [] #outputs include intermediate supervision result
+        o = []
         x = self.pre_process(inputs)
 
-        # print('pre_process input : ', inputs.shape, ' -> output : ', x.shape)
         for _ in range(self.nStack):
             '''
             hg output :  torch.Size([1, 128, 64, 64, 64])
@@ -318,11 +308,6 @@ class OffsetHead(nn.Module):
         
         cnv_dim = 128
 
-        # self.offset_module = nn.Sequential(
-        #     nn.Conv3d(cnv_dim, cnv_dim, kernel_size=3, padding=1),
-        #     nn.ReLU(),
-        #     nn.Conv3d(cnv_dim, 3, (1, 1, 1))
-        # )
         self.offset_module = nn.Sequential(
             nn.Conv3d(cnv_dim, cnv_dim, kernel_size=3, padding=1),
             nn.ReLU(),
@@ -335,23 +320,12 @@ class OffsetHead(nn.Module):
         p = 0
         stride = (s ,s, s)
 
-        # k = 4
-        # kernel = (k, k ,k)
-        # s = 4
-        # p = 0
-        # stride = (s ,s, s)
-
         self.avgpool = nn.AvgPool3d(kernel_size=kernel, stride=stride, padding=p)
         fc1_size = (64 // k) ** 3 * 4
 
         self.fc1 = nn.Linear(fc1_size, 1024)
         self.fc2 = nn.Linear(1024, 1024)
         self.fc3 = nn.Linear(1024, 16)
-
-        # self.dropout1 = nn.Dropout(p=0.1)
-        # self.dropout2 = nn.Dropout(p=0.1)
-
-        # self.fc = nn.Linear(128, 16)
         self.relu = nn.ReLU()
         
         for m in self.modules():
@@ -359,27 +333,16 @@ class OffsetHead(nn.Module):
 
     def forward(self, feat):
         x = self.offset_module(feat)
-
-        # print('avg input : ', x.shape)
         x = self.avgpool(x)
-        # print('avg output : ', x.shape)
-        # x = rearrange(x, 'b c d h w -> b c (d h w)')
-        # x = self.fc(x)
-
-        # x = self.avgpool(x)
         x = rearrange(x, 'b c d h w -> b c (d h w)')
 
         x = self.fc1(x)
         x = self.relu(x)
-        # x = self.dropout1(x)
 
         x = self.fc2(x)
         x = self.relu(x)
-        # x = self.dropout2(x)
-
         x = self.fc3(x)
 
         x = rearrange(x, 'b d c -> b c d')
         
         return x
-    

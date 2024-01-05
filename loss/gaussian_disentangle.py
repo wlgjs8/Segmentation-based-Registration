@@ -11,7 +11,7 @@ class GDLoss(nn.Module):
         
     def forward(self, heatmaps):
         '''
-        heatmap (shape : [b, 16 or 32, d, h, w])
+        heatmap (shape : [b, 16, d, h, w])
         '''
         losses = []
         heatmaps = heatmaps[0]

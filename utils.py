@@ -59,14 +59,12 @@ def resize_img(img, size, mode='bilinear'):
 
 
 def hadamard_product(heatmaps):
-    
     '''
     input : 
         heatmaps : [N, 64, 128, 128]
     output : 
         results : [N, 3] weighted sum for center points (float)
     '''
-
     results = []
     heatmaps = heatmaps.unsqueeze(0).unsqueeze(-1)
 
@@ -97,6 +95,16 @@ def hadamard_product(heatmaps):
 
 
 def feature_crop(features, points, box_size=[64, 32, 32], final_size=[64, 32, 32], margin=False):
+    '''
+    input : 
+        features : [1, N, 64, 128, 128] Input 영상과 Stack1의 output 을 Concat한 feature map 
+        points : [N, 3] 예측 중심점
+        box_size : [64, 32, 32] crop 할 사이즈
+        final_size : [64, 32, 32] crop 후에 Classifier 에 입력 사이즈
+        margin : crop 박스에 Margin을 2 Voxel 만큼 줄지 말지 여부 (bool)
+    output : 
+        results : [N, 3] weighted sum for center points (float)
+    '''
     margin_value = 2
     box_size = np.array(box_size)
     centers = points.detach().cpu().numpy()
@@ -141,6 +149,18 @@ def feature_crop(features, points, box_size=[64, 32, 32], final_size=[64, 32, 32
     return crop_features
 
 
+def draw_center(center_coords, shape=(RESIZE_DEPTH, RESIZE_HEIGHT, RESIZE_WIDTH)):
+    center_volumes = []
+    for cen_idx in range(center_coords.shape[0]):
+        center_coord = center_coords[cen_idx].astype(int)
+
+        center_volume = np.zeros(shape)
+        center_volume[center_coord[0], center_coord[1], center_coord[2]] = 1
+        center_volumes.append(center_volume)
+
+    return np.array(center_volumes)
+
+
 def draw_box(box_coords, shape=(RESIZE_DEPTH, RESIZE_HEIGHT, RESIZE_WIDTH)):
     box_volumes = []
     for box_idx in range(box_coords.shape[0]):
@@ -166,16 +186,37 @@ def draw_box(box_coords, shape=(RESIZE_DEPTH, RESIZE_HEIGHT, RESIZE_WIDTH)):
 
     return np.array(box_volumes)
 
-def draw_center(center_coords, shape=(RESIZE_DEPTH, RESIZE_HEIGHT, RESIZE_WIDTH)):
-    center_volumes = []
-    for cen_idx in range(center_coords.shape[0]):
-        center_coord = center_coords[cen_idx].astype(int)
 
-        center_volume = np.zeros(shape)
-        center_volume[center_coord[0], center_coord[1], center_coord[2]] = 1
-        center_volumes.append(center_volume)
+def draw_metal_boxes(box_coords, pred_metal_list, shape=(RESIZE_DEPTH, RESIZE_HEIGHT, RESIZE_WIDTH)):
+    box_volumes = []
+    for box_idx in range(box_coords.shape[0]):
+        box_coord = box_coords[box_idx].astype(int)
 
-    return np.array(center_volumes)
+        if pred_metal_list[box_idx] == 1:
+            color = 2
+        else:
+            color = 1
+
+        box_volume = np.zeros(shape)
+        box_volume[box_coord[0]:box_coord[3], box_coord[1], box_coord[2]] = color
+        box_volume[box_coord[0]:box_coord[3], box_coord[1], box_coord[5]] = color
+        box_volume[box_coord[0]:box_coord[3], box_coord[4], box_coord[2]] = color
+        box_volume[box_coord[0]:box_coord[3], box_coord[4], box_coord[5]] = color
+        
+        box_volume[box_coord[0], box_coord[1]:box_coord[4], box_coord[2]] = color
+        box_volume[box_coord[0], box_coord[1]:box_coord[4], box_coord[5]] = color
+        box_volume[box_coord[3], box_coord[1]:box_coord[4], box_coord[2]] = color
+        box_volume[box_coord[3], box_coord[1]:box_coord[4], box_coord[5]] = color
+        
+        box_volume[box_coord[0], box_coord[1], box_coord[2]:box_coord[5]] = color
+        box_volume[box_coord[0], box_coord[4], box_coord[2]:box_coord[5]] = color
+        box_volume[box_coord[3], box_coord[1], box_coord[2]:box_coord[5]] = color
+        box_volume[box_coord[3], box_coord[4], box_coord[2]:box_coord[5]] = color
+        
+        box_volumes.append(box_volume)
+
+    return np.array(box_volumes)
+
 
 def save_file(array, save_path, save_dir, idx=None):
     nii_array = nib.Nifti1Image(array, affine=np.eye(4))
@@ -211,6 +252,43 @@ def save_detection_result(gt_image,
     filtered_pred_heatmap = pred_heatmap[gt_cls==1]
     filtered_pred_center = draw_center(pred_center[gt_cls==1])
     filtered_pred_bbox = draw_box(pred_bbox[gt_cls==1])
+
+    save_file(gt_image, 'image', save_dir)
+
+    for idx in range(gt_heatmap.shape[0]):
+        save_file(gt_heatmap[idx], 'gt_heatmap', save_dir, idx)
+        save_file(gt_center[idx], 'gt_center', save_dir, idx)
+        save_file(gt_bbox[idx], 'gt_bbox', save_dir, idx)
+        save_file(filtered_pred_heatmap[idx], 'pred_heatmap', save_dir, idx)
+        save_file(filtered_pred_center[idx], 'pred_center', save_dir, idx)
+        save_file(filtered_pred_bbox[idx], 'pred_bbox', save_dir, idx)
+
+def save_detection_and_metal_classification_result(gt_image, 
+                          gt_heatmap, gt_center, gt_bbox, gt_cls,
+                          pred_heatmap, pred_center, pred_bbox, pred_metal_list,
+                          save_dir='./results/detection_and_metal_classification/'):
+    
+    '''
+    input : 
+        gt_image : [64, 128, 128]
+        gt_heatmap : [N, 64, 128, 128]
+        gt_center : [N, 3]
+        gt_bbox : [N, 6]
+        gt_cls : [16]
+
+        pred_heatmap : [16, 64, 128, 128]
+        pred_center : [16, 3]
+        pred_bbox : [16, 3]
+
+    output : 
+        results : [N, 3] weighted sum for center points (float)
+    '''
+
+    gt_bbox = draw_metal_boxes(gt_bbox, pred_metal_list)
+    gt_center = draw_center(gt_center)
+    filtered_pred_heatmap = pred_heatmap[gt_cls==1]
+    filtered_pred_center = draw_center(pred_center[gt_cls==1])
+    filtered_pred_bbox = draw_metal_boxes(pred_bbox[gt_cls==1], pred_metal_list[gt_cls==1])
 
     save_file(gt_image, 'image', save_dir)
 

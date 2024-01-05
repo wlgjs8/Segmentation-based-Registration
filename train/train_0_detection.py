@@ -10,7 +10,7 @@ from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.tensorboard import SummaryWriter
 
 from config import (
-    TRAINING_EPOCH, RESIZE_DEPTH, RESIZE_HEIGHT, RESIZE_WIDTH
+    TRAINING_EPOCH, RESIZE_DEPTH, RESIZE_HEIGHT, RESIZE_WIDTH, DR_EPOCH
 )
 from model.detection_model import HourGlass3D
 from dataloader.detection_dataset import get_detection_dataloader
@@ -53,7 +53,6 @@ optimizer = Adam(params=model.parameters(), lr=1e-3)
 scheduler = MultiStepLR(optimizer, [40, 120, 360], gamma=0.1, last_epoch=-1)
 
 min_valid_loss = math.inf
-DR_EPOCH = 40
 
 for epoch in range(TRAINING_EPOCH):
     train_loss = 0.0
@@ -72,6 +71,7 @@ for epoch in range(TRAINING_EPOCH):
         resize_bbox = data['resize_bbox'].type(torch.float32)
         resize_center = data['resize_center'].type(torch.float32)
         resize_heatmap = data['resize_heatmap']
+        resize_half_heatmap = data['resize_half_heatmap']
         
         norm_resize_center = resize_center.squeeze(0)
         norm_resize_center[:,0] = norm_resize_center[:,0] / RESIZE_DEPTH
@@ -91,7 +91,8 @@ for epoch in range(TRAINING_EPOCH):
         inter_output, output, offset = model(resize_image)
 
         pred_heatmap = output[0, (cls==1)[0], :, :, :].unsqueeze(0)
-        train_hm_loss = hm_criterion(pred_heatmap, resize_heatmap)
+        pred_inter_heatmap = inter_output[0, (cls==1)[0], :, :, :].unsqueeze(0)
+        train_hm_loss = hm_criterion(pred_heatmap, resize_heatmap) + hm_criterion(pred_inter_heatmap, resize_half_heatmap)
         train_gd_loss = gd_criterion(output)
 
         pred_center = hadamard_product(output.squeeze(0))
@@ -169,19 +170,6 @@ for epoch in range(TRAINING_EPOCH):
     print()
             
     with torch.no_grad():
-        temp_image = None
-        temp_inter_target = None
-        temp_target = None
-        
-        temp_gt_cls = None
-        temp_gt_center = None
-        temp_gt_heatmap = None
-        temp_gt_half_heatmap = None
-        temp_person_id = None
-        temp_flag = None
-
-        point_error_heatmap_list = []
-
         if epoch == (DR_EPOCH + 1):
             min_valid_loss = math.inf
 
@@ -194,6 +182,7 @@ for epoch in range(TRAINING_EPOCH):
             resize_bbox = data['resize_bbox'].type(torch.float32)
             resize_center = data['resize_center'].type(torch.float32)
             resize_heatmap = data['resize_heatmap']
+            resize_half_heatmap = data['resize_half_heatmap']
 
             norm_resize_center = resize_center.squeeze(0)
             norm_resize_center[:,0] = norm_resize_center[:,0] / RESIZE_DEPTH
@@ -213,7 +202,8 @@ for epoch in range(TRAINING_EPOCH):
             inter_output, output, offset = model(resize_image)
 
             pred_heatmap = output[0, (cls==1)[0], :, :, :].unsqueeze(0)
-            val_hm_loss = hm_criterion(pred_heatmap, resize_heatmap)
+            pred_inter_heatmap = inter_output[0, (cls==1)[0], :, :, :].unsqueeze(0)
+            val_hm_loss = hm_criterion(pred_heatmap, resize_heatmap) + hm_criterion(pred_inter_heatmap, resize_half_heatmap)
             val_gd_loss = gd_criterion(output)
 
             pred_center = hadamard_product(output.squeeze(0))

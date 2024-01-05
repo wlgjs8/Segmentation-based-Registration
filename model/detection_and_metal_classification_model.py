@@ -269,7 +269,7 @@ class HourGlass3D(nn.Module):
 
         self.linear_upsample = nn.Upsample(scale_factor=2)
 
-        self.score_head = ResNet18(inchannels=129, num_classes=3)
+        self.score_head = ResNet18(inchannels=129, num_classes=2)
 
         for m in self.modules():
             weight_init_xavier_uniform(m)
@@ -306,7 +306,7 @@ class HourGlass3D(nn.Module):
                 o.append(offset)
 
                 pred_hadamard_center = hadamard_product(out.squeeze(0))
-                o.append(pred_hadamard_center)
+                # o.append(pred_hadamard_center)
 
                 linear_upsample_feat = self.linear_upsample(o2)
                 concat_feature = torch.cat([inputs, linear_upsample_feat], dim=1)
