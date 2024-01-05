@@ -23,30 +23,19 @@ pip install -r requirements.txt
 ```
 
 
-## Dataset
-Download the SOC dataset from [google drive](https://drive.google.com/file/d/1hfo33A7diED2dikTpN9o4KnZTxizGdLr/view). Place the files like `datasets/SOC`, so that the following path exists
-`dataset/SOC/TrainSet/Imgs/COCO_train2014_000000051941.jpg`.
-```
-https://drive.google.com/file/d/1hfo33A7diED2dikTpN9o4KnZTxizGdLr/view
-```
-
 ## Training 
-Download our pre-trained weights for initialization from [google drive](https://drive.google.com/file/d/1A2K0YCdHUR_iIbNDYjpE-867Hf6WGbWD/view?usp=share_link). Place the initial weight inside of `pretrained/model_init.pth`.
+To train our detection baseline, follow below train instruction.
 
 ```
-python train.py 
+python train/train_0_detection.py 
+python train/train_1_detection_and_metal_classification.py 
 ```
 
 ## Testing
-To evaluate the performance of our method on MAE, S-measure, and E-measure. You can download the weights of the trained model from [google drive](https://drive.google.com/file/d/12yD04QZmYq7TPB3MWHHsktWpQHEFbvyP/view?usp=share_link).
-Place the trained weight inside of `saved_models/model_final.pth`.
+To test the performance of our method, place the given pretrained weight inside of `checkpoints/detection_best_model.pth`.
+To test the performance of our method, place the given pretrained weight inside of `checkpoints/detection_and_metal_classification_best_model.pth`.
 
 ```
-python test.py
-```
-
-To evaluate the performance of our method on $Sal$ which we proposed. It might takes 3-4 minutes to extract the backtracked boxes.
-
-```
-python sal_test.py
+python test/test_0_detection.py
+python test/test_1_detection_and_metal_classification.py
 ```
