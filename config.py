@@ -86,3 +86,8 @@ METAL_EPOCH = 40
 
 ### Metal Classification Label Smoothing을 위한 Epsilon ###
 METAL_EPSILON = 0.05
+
+### OTSU 알고리즘을 통해 Segmentation 할 환자번호 (폴더번호) ###
+OTSU_PERSON_INDEX = [
+    '1', '2', '3', '4'
+]

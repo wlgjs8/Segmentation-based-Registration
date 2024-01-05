@@ -8,7 +8,7 @@ from skimage.measure import label
 
 
 from config import (
-    RESIZE_DEPTH, RESIZE_HEIGHT, RESIZE_WIDTH, UPPER_TOOTH_NUM, LOWER_TOOTH_NUM
+    RESIZE_DEPTH, RESIZE_HEIGHT, RESIZE_WIDTH, UPPER_TOOTH_NUM, LOWER_TOOTH_NUM, OTSU_PERSON_INDEX
 )
 
 
@@ -49,38 +49,6 @@ def draw_whole_box(box_volume, ind, label='metal'):
 
     return box_volume
 
-def fill_whole_box(box_volume, ind, label='metal'):
-    # print('ind : ', ind)
-    # print('shape : ', shape)
-
-    if label == 'metal':
-        color = 0
-    else:
-        color = 1
-
-    
-    point1 = (ind[0], ind[1], ind[2])
-    point2 = (ind[3], ind[4], ind[5])
-
-    # 박스의 크기 계산
-    box_size = (abs(point1[0] - point2[0]) + 1,
-                abs(point1[1] - point2[1]) + 1,
-                abs(point1[2] - point2[2]) + 1)
-
-    # 박스의 시작 지점 계산
-    start_point = (min(point1[0], point2[0]),
-                min(point1[1], point2[1]),
-                min(point1[2], point2[2]))
-
-    # 색상으로 채우기 위한 박스 생성
-    color_box = np.full(box_size, color)
-
-    # 박스를 원래 볼륨에 복사
-    box_volume[start_point[0]:start_point[0]+box_size[0],
-            start_point[1]:start_point[1]+box_size[1],
-            start_point[2]:start_point[2]+box_size[2]] = color_box
-    
-    return box_volume
 
 def half_fill_whole_box(box_volume, ind, label='metal'):
 
@@ -169,14 +137,6 @@ def single_otsu_thresholding(filled_volume, original_image):
 
     return binary_volume.astype(int), single_otsu_threshold
 
-def global_thresholding(filled_volume, image):
-    volume_data = filled_volume * image
-
-    global_threshold = _get_adaptive_threshold(volume_data)
-    print('image global_threshold : ', global_threshold)
-    binary_volume = volume_data > global_threshold
-
-    return binary_volume.astype(int)
 
 def ccl_whole_box(ccl_volume, original_image, ind, threshold=1717.1131525039673):
     
@@ -210,22 +170,13 @@ def ccl_whole_box(ccl_volume, original_image, ind, threshold=1717.1131525039673)
     return ccl_volume
 
 
-# CLEAN_WHOLE = [
-#     '1', '3', '16', '17'
-# ]
-
-CLEAN_WHOLE = [
-    '2', '9','10','11','12',
-    '13','14','15','18','19',
-]
-
 DATA_DIR = os.path.abspath("C:/Users/JeeheonKim/source/ct/pose/ct_model_box")
 SAVE_DIR = os.path.abspath("C:/Users/JeeheonKim/source/ct/pose/ct_model_box")
 
 datalist = []
-for i in range(len(CLEAN_WHOLE)):
-    datalist.append((CLEAN_WHOLE[i], 'upper'))
-    datalist.append((CLEAN_WHOLE[i], 'lower'))
+for i in range(len(OTSU_PERSON_INDEX)):
+    datalist.append((OTSU_PERSON_INDEX[i], 'upper'))
+    datalist.append((OTSU_PERSON_INDEX[i], 'lower'))
 
 
 for i in range(len(datalist)):

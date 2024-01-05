@@ -19,15 +19,12 @@ torch.manual_seed(123)
 
 writer = SummaryWriter()
 model = UNet3D(in_channels=1, num_classes=1)
-# MODEL_WEIGHT_PATH = './checkpoints_mask/epoch5_valLoss0.0025492373388260603.pth'
-# MODEL_WEIGHT_PATH = './checkpoints_mask/epoch36_valLoss0.007552353665232658.pth'
 
-# MODEL_WEIGHT_PATH = './checkpoints_mask/epoch28_valLoss0.010265560820698738.pth'
 MODEL_WEIGHT_PATH = './checkpoints_mask/epoch39_valLoss0.005633824970573187.pth'
-
 model.load_state_dict(torch.load(MODEL_WEIGHT_PATH))
 model.cuda()
 train_dataloader, val_dataloader, _ = get_tooth_train_val_test_Dataloaders(train_transforms= train_transform_mask, val_transforms=val_transform_mask, test_transforms= val_transform_mask)
+
 # criterion = nn.MSELoss()
 criterion = DiceScore()
 
